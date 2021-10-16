@@ -84,7 +84,7 @@ irGSEA.score <- function(object = NULL, assay = NULL, slot = "scale.data",
                          custom = F, geneset = NULL,
                          msigdb = T, species = "Homo sapiens",
                          category = "H", subcategory = NULL, geneid = "symbol",
-                         method = c("AUCell", "UCell", "singscore", "ssgsea","PCAscore"),
+                         method = c("AUCell", "UCell", "singscore", "ssgsea", "PCAscore"),
                          aucell.MaxRank = NULL, ucell.MaxRank = NULL,
                          kcdf = 'Gaussian', mini_gene_count = 2){
   set.seed(seeds)
@@ -170,7 +170,7 @@ irGSEA.score <- function(object = NULL, assay = NULL, slot = "scale.data",
     }
 
     h.gsets.list <- geneset %>% purrr::compact()
-    
+
     #filter signatures
     if(mini_gene_count<=2) mini_gene_count <- 2
     h.gsets.list<-h.gsets.list[lapply(h.gsets.list,function(x) sum(x%in%rownames(my.matrix)==TRUE))>= mini_gene_count]
@@ -292,7 +292,7 @@ irGSEA.score <- function(object = NULL, assay = NULL, slot = "scale.data",
     feas<-IOBR:: feature_manipulation(data=my.matrix, is_matrix = T)
     feas<-feas[feas%in%unique(unlist(signature))]
     my.matrix<-my.matrix[rownames(my.matrix)%in%feas,]
- 
+
     #calculating signature score
     goi <- names(signature)
     ###########################
@@ -309,7 +309,7 @@ irGSEA.score <- function(object = NULL, assay = NULL, slot = "scale.data",
     pdata<-as.matrix(pdata)
     ###############################################
     print(pdata[1:5,1:5])
-    
+
     object[["PCAscore"]] <- SeuratObject::CreateAssayObject(counts = t(pdata))
 
     object <- SeuratObject::SetAssayData(object, slot = "scale.data",
