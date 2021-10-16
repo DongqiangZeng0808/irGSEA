@@ -14,34 +14,6 @@ For more details, please view
 
 ## Installation
 
-``` r
-# install packages from CRAN
-cran.packages <- c("msigdbr", "dplyr", "purrr", "stringr","magrittr",
-                   "RobustRankAggreg", "tibble", "reshape2", "ggsci",
-                   "tidyr", "aplot", "ggfun", "ggplotify", "ggridges", 
-                   "gghalves", "Seurat", "SeuratObject", "methods", 
-                   "devtools", "BiocManager","data.table","doParallel",
-                   "doRNG")
-if (!requireNamespace(cran.packages, quietly = TRUE)) { 
-    install.packages(cran.packages, ask = F, update = F)
-}
-
-# install packages from Bioconductor
-bioconductor.packages <- c("GSEABase", "AUCell", "SummarizedExperiment", 
-                           "singscore", "GSVA", "ComplexHeatmap", "ggtree", 
-                           "Nebulosa")
-if (!requireNamespace(bioconductor.packages, quietly = TRUE)) { 
-    BiocManager::install(bioconductor.packages, ask = F, update = F)
-}
-
-if (!requireNamespace("UCell", quietly = TRUE)) { 
-    devtools::install_github("carmonalab/UCell")
-}
-if (!requireNamespace("irGSEA", quietly = TRUE)) { 
-    devtools::install_github("chuiqin/irGSEA")
-}
-```
-
 ## load example dataset
 
 load PBMC dataset by R package SeuratData
@@ -60,12 +32,13 @@ InstallData("pbmc3k")
 ``` r
 library(Seurat)
 library(SeuratData)
+library(IOBR)
 # loading dataset
 data("pbmc3k.final")
 pbmc3k.final <- UpdateSeuratObject(pbmc3k.final)
 # plot
 DimPlot(pbmc3k.final, reduction = "umap",
-        group.by = "seurat_annotations",label = T) + NoLegend()
+        group.by = "seurat_annotations",label = T) + NoLegend()+ design_mytheme()
 ```
 
 <img src="man/figures/README-unnamed-chunk-3-1.png" width="100%" />
@@ -91,43 +64,57 @@ Error (Valid ‘mctype’: ‘snow’ or ‘doMC’) occurs when ncore &gt; 1 :
 please ensure the version of AUCell &gt;= 1.14 or set ncore = 1.
 
 ``` r
-pbmc3k.final <- irGSEA.score(object = pbmc3k.final, assay = "RNA", 
-                             slot = "data", seeds = 123, ncores = 1,
-                             min.cells = 3, min.feature = 0,
-                             custom = F, geneset = NULL, msigdb = T, 
-                             species = "Homo sapiens", category = "H",  
-                             subcategory = NULL, geneid = "symbol",
-                             method = c("AUCell", "UCell", "singscore", 
-                                        "ssgsea"),
-                             aucell.MaxRank = NULL, ucell.MaxRank = NULL, 
-                             kcdf = 'Gaussian')
+pbmc3k.final <- irGSEA.score(object         = pbmc3k.final, 
+                             assay          = "RNA", 
+                             slot           = "scale.data", 
+                             seeds          = 123,
+                             ncores         = 1,
+                             min.cells      = 3, 
+                             min.feature    = 0,
+                             custom         = F, 
+                             geneset        = NULL,
+                             msigdb         = T, 
+                             species        = "Homo sapiens", 
+                             category       = "H",  
+                             subcategory    = NULL, 
+                             geneid         = "symbol",
+                             method         = c("AUCell", "UCell", "singscore", "ssgsea","PCAscore"),
+                             aucell.MaxRank = NULL, 
+                             ucell.MaxRank  = NULL, 
+                             kcdf           = 'Gaussian')
 #> Validating object structure
 #> Updating object slots
 #> Ensuring keys are in the proper strucutre
 #> Ensuring feature names don't have underscores or pipes
 #> Object representation is consistent with the most current Seurat version
-#> Calculate AUCell scores
+#> >>>--- Calculate AUCell scores
 #> Warning: Feature names cannot have underscores ('_'), replacing with dashes
 #> ('-')
 
 #> Warning: Feature names cannot have underscores ('_'), replacing with dashes
 #> ('-')
-#> Finish calculate AUCell scores
-#> Calculate UCell scores
+#> >>>---Finish calculate AUCell scores
+#> --------------------------------------
+#> >>>--- Calculate UCell scores
+#> Warning in if (class(matrix) != "dgCMatrix") {: 条件的长度大于一，因此只能用其第
+#> 一元素
+
+#> Warning in if (class(matrix) != "dgCMatrix") {: Feature names cannot have
+#> underscores ('_'), replacing with dashes ('-')
+
+#> Warning in if (class(matrix) != "dgCMatrix") {: Feature names cannot have
+#> underscores ('_'), replacing with dashes ('-')
+#> >>>--- Finish calculate UCell scores
+#> --------------------------------------
+#> >>>--- Calculate singscore scores
 #> Warning: Feature names cannot have underscores ('_'), replacing with dashes
 #> ('-')
 
 #> Warning: Feature names cannot have underscores ('_'), replacing with dashes
 #> ('-')
-#> Finish calculate UCell scores
-#> Calculate singscore scores
-#> Warning: Feature names cannot have underscores ('_'), replacing with dashes
-#> ('-')
-
-#> Warning: Feature names cannot have underscores ('_'), replacing with dashes
-#> ('-')
-#> Finish calculate singscore scores
-#> Calculate ssgsea scores
+#> >>>--- Finish calculate singscore scores
+#> --------------------------------------
+#> >>>--- Calculate ssgsea scores
 #> Warning in .filterFeatures(expr, method): 1 genes with constant expression
 #> values throuhgout the samples.
 
@@ -136,9 +123,183 @@ pbmc3k.final <- irGSEA.score(object = pbmc3k.final, assay = "RNA",
 
 #> Warning in .filterFeatures(expr, method): Feature names cannot have underscores
 #> ('_'), replacing with dashes ('-')
-#> Finish calculate ssgsea scores
+#> >>>--- Finish calculate ssgsea scores
+#> --------------------------------------
+#> >>>--- Calculate PCA scores
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+
+#> Warning: In prcomp.default(t(eset), na.action = na.omit, scale. = T) :
+#>  extra argument 'na.action' will be disregarded
+#>                HALLMARK_ADIPOGENESIS HALLMARK_ALLOGRAFT_REJECTION
+#> AAACATACAACCAC            -2.0836065                    -3.536539
+#> AAACATTGAGCTAC             0.3171101                     3.410572
+#> AAACATTGATCAGC             1.0748024                    -3.455677
+#> AAACCGTGCTTCCG             1.7233565                     3.884758
+#> AAACCGTGTATGCG            -1.7107910                    -2.429350
+#>                HALLMARK_ANDROGEN_RESPONSE HALLMARK_ANGIOGENESIS
+#> AAACATACAACCAC                 -0.4784224            -0.6170896
+#> AAACATTGAGCTAC                 -0.2221773            -1.9103718
+#> AAACATTGATCAGC                  1.9449294            -0.5253560
+#> AAACCGTGCTTCCG                 -1.1527247             1.5025361
+#> AAACCGTGTATGCG                  2.8965137            -0.6519490
+#>                HALLMARK_APICAL_JUNCTION
+#> AAACATACAACCAC              -0.07358956
+#> AAACATTGAGCTAC               1.00431328
+#> AAACATTGATCAGC               0.10139119
+#> AAACCGTGCTTCCG               1.67354038
+#> AAACCGTGTATGCG               1.47968479
+#> Warning: Feature names cannot have underscores ('_'), replacing with dashes
+#> ('-')
+#> Warning: Feature names cannot have underscores ('_'), replacing with dashes
+#> ('-')
+#> >>>--- Finish calculate PCA scores
+#> --------------------------------------
 Seurat::Assays(pbmc3k.final)
-#> [1] "RNA"       "AUCell"    "UCell"     "singscore" "ssgsea"
+#> [1] "RNA"       "AUCell"    "UCell"     "singscore" "ssgsea"    "PCAscore"
 ```
 
 ## Integrate differential gene set
@@ -150,15 +311,16 @@ significant and common differential in all gene sets enrichment analysis
 methods. All results are saved in a list.
 
 ``` r
-result.dge <- irGSEA.integrate(object = pbmc3k.final, 
+result.dge <- irGSEA.integrate(object   = pbmc3k.final, 
                                group.by = "seurat_annotations",
-                               metadata = NULL, col.name = NULL,
-                               method = c("AUCell","UCell","singscore",
-                                          "ssgsea"))
+                               metadata = NULL, 
+                               col.name = NULL,
+                               method   = c("AUCell","UCell","singscore", "ssgsea","PCAscore"))
 #> Calculate differential gene set : AUCell
 #> Calculate differential gene set : UCell
 #> Calculate differential gene set : singscore
 #> Calculate differential gene set : ssgsea
+#> Calculate differential gene set : PCAscore
 class(result.dge)
 #> [1] "list"
 ```
@@ -172,9 +334,9 @@ class(result.dge)
 Show co-upregulated or co-downregulated gene sets per cluster in RRA
 
 ``` r
-irGSEA.heatmap.plot <- irGSEA.heatmap(object = result.dge, 
-                                      method = "RRA",
-                                      top = 50, 
+irGSEA.heatmap.plot <- irGSEA.heatmap(object       = result.dge, 
+                                      method       = "RRA",
+                                      top          = 50, 
                                       show.geneset = NULL)
 irGSEA.heatmap.plot
 ```
@@ -192,7 +354,7 @@ please uninstall ggtree and run
 ``` r
 irGSEA.bubble.plot <- irGSEA.bubble(object = result.dge, 
                                     method = "RRA", 
-                                    top = 50)
+                                    top    = 50)
 irGSEA.bubble.plot
 ```
 
@@ -208,8 +370,8 @@ only the first element will be used. It’s ok.
 ``` r
 irGSEA.upset.plot <- irGSEA.upset(object = result.dge, 
                                   method = "RRA")
-#> Warning in if (as.character(ta_call[[1]]) == "upset_top_annotation") {: the
-#> condition has length > 1 and only the first element will be used
+#> Warning in if (as.character(ta_call[[1]]) == "upset_top_annotation") {: 条件的长
+#> 度大于一，因此只能用其第一元素
 irGSEA.upset.plot
 ```
 
@@ -221,13 +383,10 @@ Show the intersections of significant gene sets among clusters in all
 methods
 
 ``` r
-irGSEA.barplot.plot <- irGSEA.barplot(object = result.dge,
-                                      method = c("AUCell", "UCell", "singscore",
-                                                 "ssgsea"))
-irGSEA.barplot.plot
+# irGSEA.barplot.plot <- irGSEA.barplot(object = result.dge,
+#                                       method = c("AUCell", "UCell", "singscore","ssgsea","PCAscore"))
+# irGSEA.barplot.plot
 ```
-
-<img src="man/figures/README-unnamed-chunk-10-1.png" width="100%" />
 
 ### 2. local show
 
@@ -240,11 +399,18 @@ Show the expression and distribution of “HALLMARK-INFLAMMATORY-RESPONSE”
 in Ucell on UMAP plot.
 
 ``` r
-scatterplot <- irGSEA.density.scatterplot(object = pbmc3k.final,
+scatterplot1 <- irGSEA.density.scatterplot(object = pbmc3k.final,
                              method = "UCell",
                              show.geneset = "HALLMARK-INFLAMMATORY-RESPONSE",
                              reduction = "umap")
-scatterplot
+
+
+scatterplot2 <- irGSEA.density.scatterplot(object = pbmc3k.final,
+                             method = "PCAscore",
+                             show.geneset = "HALLMARK-INFLAMMATORY-RESPONSE",
+                             reduction = "umap")
+#> Warning in ks.defaults(x = x, w = w, binned = binned, bgridsize = bgridsize, : Weights don't sum to sample size - they have been scaled accordingly
+scatterplot1 + scatterplot2
 ```
 
 <img src="man/figures/README-unnamed-chunk-11-1.png" width="100%" />
@@ -255,10 +421,13 @@ Show the expression and distribution of “HALLMARK-INFLAMMATORY-RESPONSE”
 in Ucell among clusters.
 
 ``` r
-halfvlnplot <- irGSEA.halfvlnplot(object = pbmc3k.final,
+halfvlnplot1 <- irGSEA.halfvlnplot(object = pbmc3k.final,
                                   method = "UCell",
                                   show.geneset = "HALLMARK-INFLAMMATORY-RESPONSE")
-halfvlnplot
+halfvlnplot2 <- irGSEA.halfvlnplot(object = pbmc3k.final,
+                                  method = "PCAscore",
+                                  show.geneset = "HALLMARK-INFLAMMATORY-RESPONSE")
+halfvlnplot1+halfvlnplot2
 ```
 
 <img src="man/figures/README-unnamed-chunk-12-1.png" width="100%" />
@@ -269,11 +438,16 @@ Show the expression and distribution of “HALLMARK-INFLAMMATORY-RESPONSE”
 in Ucell among clusters.
 
 ``` r
-ridgeplot <- irGSEA.ridgeplot(object = pbmc3k.final,
+ridgeplot1 <- irGSEA.ridgeplot(object = pbmc3k.final,
                               method = "UCell",
                               show.geneset = "HALLMARK-INFLAMMATORY-RESPONSE")
-ridgeplot
-#> Picking joint bandwidth of 0.00533
+
+ridgeplot2 <- irGSEA.ridgeplot(object = pbmc3k.final,
+                              method = "PCAscore",
+                              show.geneset = "HALLMARK-INFLAMMATORY-RESPONSE")
+ridgeplot1+ridgeplot2
+#> Picking joint bandwidth of 0.00502
+#> Picking joint bandwidth of 0.337
 ```
 
 <img src="man/figures/README-unnamed-chunk-13-1.png" width="100%" />
@@ -284,10 +458,25 @@ Show the expression and distribution of “HALLMARK-INFLAMMATORY-RESPONSE”
 in Ucell among clusters.
 
 ``` r
-densityheatmap <- irGSEA.densityheatmap(object = pbmc3k.final,
+densityheatmap1 <- irGSEA.densityheatmap(object = pbmc3k.final,
                                         method = "UCell",
                                         show.geneset = "HALLMARK-INFLAMMATORY-RESPONSE")
-densityheatmap
+densityheatmap1
 ```
 
 <img src="man/figures/README-unnamed-chunk-14-1.png" width="100%" />
+
+``` r
+densityheatmap2 <- irGSEA.densityheatmap(object = pbmc3k.final,
+                                        method = "PCAscore",
+                                        show.geneset = "HALLMARK-INFLAMMATORY-RESPONSE")
+densityheatmap2
+```
+
+<img src="man/figures/README-unnamed-chunk-15-1.png" width="100%" />
+
+``` r
+densityheatmap1+densityheatmap2
+```
+
+<img src="man/figures/README-unnamed-chunk-16-1.png" width="100%" />
