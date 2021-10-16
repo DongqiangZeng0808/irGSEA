@@ -354,7 +354,7 @@ please uninstall ggtree and run
 ``` r
 irGSEA.bubble.plot <- irGSEA.bubble(object = result.dge, 
                                     method = "RRA", 
-                                    top    = 50)
+                                    top    = 30)
 irGSEA.bubble.plot
 ```
 
@@ -461,19 +461,13 @@ in Ucell among clusters.
 densityheatmap1 <- irGSEA.densityheatmap(object = pbmc3k.final,
                                         method = "UCell",
                                         show.geneset = "HALLMARK-INFLAMMATORY-RESPONSE")
-densityheatmap1
 ```
-
-<img src="man/figures/README-unnamed-chunk-14-1.png" width="100%" />
 
 ``` r
 densityheatmap2 <- irGSEA.densityheatmap(object = pbmc3k.final,
                                         method = "PCAscore",
                                         show.geneset = "HALLMARK-INFLAMMATORY-RESPONSE")
-densityheatmap2
 ```
-
-<img src="man/figures/README-unnamed-chunk-15-1.png" width="100%" />
 
 ``` r
 densityheatmap1+densityheatmap2
