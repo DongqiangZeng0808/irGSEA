@@ -28,7 +28,7 @@
 #' @param subcategory Default NULL. The parameter works if msigdb is True.
 #' @param geneid Default symbol. Other options are "entrez" and "ensembl". The
 #' parameter works if msigdb is True.
-#' @param method A vector. Default all method.
+#' @param method A vector. Default all method. PCAscore
 #' @param aucell.MaxRank The threshold to calculate the AUC. Default only the top 5%
 #'  of the expressed genes are used to checks whether the gene set are within
 #'  the top 5% when it set to NULL. You can inputc special number, such as 1500,
@@ -40,6 +40,7 @@
 #' @param kcdf Default Gaussian if input expression values are continuous in
 #' logarithmic scale. Other option is "Poisson" if input expression values are
 #' integer counts. The parameter works if "ssgsea" is selected in "method".
+#' @param mini_gene_count default is 2
 #'
 #' @return a Seurat object including score matrix.
 #' @export
@@ -77,15 +78,15 @@
 #' kcdf = 'Gaussian')
 #' }
 #'
-irGSEA.score <- function(object = NULL, assay = NULL, slot = "data",
+irGSEA.score <- function(object = NULL, assay = NULL, slot = "scale.data",
                          min.cells = 3, min.feature = 0,
                          seeds = 123, ncores = 4,
                          custom = F, geneset = NULL,
                          msigdb = T, species = "Homo sapiens",
                          category = "H", subcategory = NULL, geneid = "symbol",
-                         method = c("AUCell", "UCell", "singscore", "ssgsea"),
+                         method = c("AUCell", "UCell", "singscore", "ssgsea","PCAscore"),
                          aucell.MaxRank = NULL, ucell.MaxRank = NULL,
-                         kcdf = 'Gaussian'){
+                         kcdf = 'Gaussian', mini_gene_count = 2){
   set.seed(seeds)
   #### prepare data
   if (all(methods::is(object)=="Seurat")){
@@ -98,7 +99,8 @@ irGSEA.score <- function(object = NULL, assay = NULL, slot = "data",
                                                assay = "RNA",
                                                min.cells = min.cells,
                                                min.feature = min.feature)
-    my.matrix <- SeuratObject::GetAssayData(object, assay = "RNA", slot = "counts")}
+
+    my.matrix <- SeuratObject::GetAssayData(object, assay = "RNA", slot = "scale.data")}
 
   #### prepare geneset
   if(msigdb == T){
@@ -168,13 +170,17 @@ irGSEA.score <- function(object = NULL, assay = NULL, slot = "data",
     }
 
     h.gsets.list <- geneset %>% purrr::compact()
-
+    
+    #filter signatures
+    if(mini_gene_count<=2) mini_gene_count <- 2
+    h.gsets.list<-h.gsets.list[lapply(h.gsets.list,function(x) sum(x%in%rownames(my.matrix)==TRUE))>= mini_gene_count]
+    ###########################
 
   }
 
   #### calculate scores
   if ("AUCell" %in% method) {
-    message("Calculate AUCell scores")
+    message(">>>--- Calculate AUCell scores")
     aucell.rank <- AUCell::AUCell_buildRankings(my.matrix,
                                                 nCores = ncores,
                                                 plotStats = F,
@@ -190,10 +196,11 @@ irGSEA.score <- function(object = NULL, assay = NULL, slot = "data",
     object[["AUCell"]] <- SeuratObject::CreateAssayObject(counts = aucell.scores)
     object <- SeuratObject::SetAssayData(object, slot = "scale.data",
                                          new.data = aucell.scores, assay = "AUCell")
-    message("Finish calculate AUCell scores")
+    message(">>>---Finish calculate AUCell scores")
+    message("--------------------------------------")
   }
   if ("UCell" %in% method) {
-    message("Calculate UCell scores")
+    message(">>>--- Calculate UCell scores")
     if (purrr::is_null(ucell.MaxRank)){ucell.MaxRank = 1500}
     ucell.scores <- UCell::ScoreSignatures_UCell(matrix = my.matrix,
                                                  features = h.gsets.list,
@@ -206,10 +213,11 @@ irGSEA.score <- function(object = NULL, assay = NULL, slot = "data",
     object[["UCell"]] <- SeuratObject::CreateAssayObject(counts = t(ucell.scores))
     object <- SeuratObject::SetAssayData(object, slot = "scale.data",
                                          new.data = t(ucell.scores), assay = "UCell")
-    message("Finish calculate UCell scores")
+    message(">>>--- Finish calculate UCell scores")
+    message("--------------------------------------")
   }
   if ("singscore" %in% method) {
-    message("Calculate singscore scores")
+    message(">>>--- Calculate singscore scores")
     # calculate the rank matrix
     attemptsLeft <- 20
     while(attemptsLeft > 0){
@@ -251,11 +259,12 @@ irGSEA.score <- function(object = NULL, assay = NULL, slot = "data",
     object[["singscore"]] <- SeuratObject::CreateAssayObject(counts = t(singscore.scores))
     object <- SeuratObject::SetAssayData(object, slot = "scale.data",
                                          new.data = t(singscore.scores), assay = "singscore")
-    message("Finish calculate singscore scores")
+    message(">>>--- Finish calculate singscore scores")
+    message("--------------------------------------")
 
   }
   if ("ssgsea" %in% method) {
-    message("Calculate ssgsea scores")
+    message(">>>--- Calculate ssgsea scores")
     h.gsets.list.ssgsea <- h.gsets.list %>% purrr::discard(.p = function(x){all(stringr::str_detect(x, pattern = "\\+$|-$"))})
     ssgsea.scores <- GSVA::gsva(as.matrix(my.matrix),
                                 h.gsets.list.ssgsea,
@@ -267,8 +276,50 @@ irGSEA.score <- function(object = NULL, assay = NULL, slot = "data",
     object[["ssgsea"]] <- SeuratObject::CreateAssayObject(counts = ssgsea.scores)
     object <- SeuratObject::SetAssayData(object, slot = "scale.data",
                                          new.data = ssgsea.scores, assay = "ssgsea")
-    message("Finish calculate ssgsea scores")
+    message(">>>--- Finish calculate ssgsea scores")
+    message("--------------------------------------")
   }
+
+
+  if ("PCAscore" %in% method) {
+    message(">>>--- Calculate PCA scores")
+
+    my.matrix<- as.matrix(my.matrix)
+    signature <- h.gsets.list %>% purrr::discard(.p = function(x){all(stringr::str_detect(x, pattern = "\\+$|-$"))})
+
+    pdata<-data.frame("Index" = 1:length(colnames(my.matrix)),"ID" = colnames(my.matrix))
+
+    feas<-IOBR:: feature_manipulation(data=my.matrix, is_matrix = T)
+    feas<-feas[feas%in%unique(unlist(signature))]
+    my.matrix<-my.matrix[rownames(my.matrix)%in%feas,]
+ 
+    #calculating signature score
+    goi <- names(signature)
+    ###########################
+    for (sig in goi) {
+      pdata[, sig] <- NA
+      genes <- signature[[sig]]
+      genes <- genes[genes %in% rownames(my.matrix)]
+      tmp <- my.matrix[genes, , drop=FALSE]
+      pdata[, sig] <- sigScore(tmp,methods = "PCA")
+    }
+    pdata<-pdata[,-which(colnames(pdata)=="Index")]
+    rownames(pdata)<-NULL
+    pdata<-column_to_rownames(pdata, var = "ID")
+    pdata<-as.matrix(pdata)
+    ###############################################
+    print(pdata[1:5,1:5])
+    
+    object[["PCAscore"]] <- SeuratObject::CreateAssayObject(counts = t(pdata))
+
+    object <- SeuratObject::SetAssayData(object, slot = "scale.data",
+                                         new.data = t(pdata), assay = "PCAscore")
+    message(">>>--- Finish calculate PCA scores")
+    message("--------------------------------------")
+  }
+
+
+
   return(object)
 
 }
@@ -328,7 +379,7 @@ irGSEA.score <- function(object = NULL, assay = NULL, slot = "data",
 
 irGSEA.integrate <- function(object = NULL, group.by = NULL,
                              metadata = NULL, col.name = NULL,
-                             method = c("AUCell","UCell","singscore","ssgsea")){
+                             method = c("AUCell","UCell","singscore","ssgsea","PCAscore")){
   # method
   if (all(method %in% Seurat::Assays(object)) == F) {
     stop("Please imput correct `method`.")

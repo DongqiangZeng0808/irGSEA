@@ -7,7 +7,7 @@
 irGSEA.score(
   object = NULL,
   assay = NULL,
-  slot = "data",
+  slot = "scale.data",
   min.cells = 3,
   min.feature = 0,
   seeds = 123,
@@ -19,10 +19,11 @@ irGSEA.score(
   category = "H",
   subcategory = NULL,
   geneid = "symbol",
-  method = c("AUCell", "UCell", "singscore", "ssgsea"),
+  method = c("AUCell", "UCell", "singscore", "ssgsea", "PCAscore"),
   aucell.MaxRank = NULL,
   ucell.MaxRank = NULL,
-  kcdf = "Gaussian"
+  kcdf = "Gaussian",
+  mini_gene_count = 2
 )
 }
 \arguments{
@@ -64,7 +65,7 @@ parameter works if msigdb is True.}
 \item{geneid}{Default symbol. Other options are "entrez" and "ensembl". The
 parameter works if msigdb is True.}
 
-\item{method}{A vector. Default all method.}
+\item{method}{A vector. Default all method. PCAscore}
 
 \item{aucell.MaxRank}{The threshold to calculate the AUC. Default only the top 5%
 of the expressed genes are used to checks whether the gene set are within
@@ -79,6 +80,8 @@ range. The parameter works if "UCell" is selected in "method".}
 \item{kcdf}{Default Gaussian if input expression values are continuous in
 logarithmic scale. Other option is "Poisson" if input expression values are
 integer counts. The parameter works if "ssgsea" is selected in "method".}
+
+\item{mini_gene_count}{default is 2}
 }
 \value{
 a Seurat object including score matrix.

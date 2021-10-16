@@ -10,7 +10,7 @@ Description: The integration of single cell rank-based gene set enrichment analy
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
 Imports: 
     aplot,
     AUCell,

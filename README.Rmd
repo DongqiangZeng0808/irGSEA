@@ -26,7 +26,7 @@ For more details, please view [irGSEA](https://chuiqin.github.io/irGSEA/)
 
 ## Installation
 
-```{r}
+```{r, echo=FALSE}
 
 # install packages from CRAN
 cran.packages <- c("msigdbr", "dplyr", "purrr", "stringr","magrittr",
@@ -47,14 +47,15 @@ if (!requireNamespace(bioconductor.packages, quietly = TRUE)) {
     BiocManager::install(bioconductor.packages, ask = F, update = F)
 }
 
+if (!requireNamespace("IOBR", quietly = TRUE))
+  devtools::install_github("IOBR/IOBR")
+
 if (!requireNamespace("UCell", quietly = TRUE)) { 
     devtools::install_github("carmonalab/UCell")
 }
 if (!requireNamespace("irGSEA", quietly = TRUE)) { 
-    devtools::install_github("chuiqin/irGSEA")
+    devtools::install_github("DongqiangZeng/irGSEA")
 }
-
-
 
 ```
 
@@ -73,15 +74,16 @@ InstallData("pbmc3k")
 ?pbmc3k.final
 ```
 
-```{r message=FALSE, warning=FALSE}
+```{r message=FALSE, warning=FALSE, fig.width=6, fig.height=6}
 library(Seurat)
 library(SeuratData)
+library(IOBR)
 # loading dataset
 data("pbmc3k.final")
 pbmc3k.final <- UpdateSeuratObject(pbmc3k.final)
 # plot
 DimPlot(pbmc3k.final, reduction = "umap",
-        group.by = "seurat_annotations",label = T) + NoLegend()
+        group.by = "seurat_annotations",label = T) + NoLegend()+ design_mytheme()
 # set cluster to idents
 Idents(pbmc3k.final) <- pbmc3k.final$seurat_annotations
 
@@ -104,16 +106,24 @@ Error (Valid 'mctype': 'snow' or 'doMC') occurs when ncore > 1 :
 please ensure the version of AUCell >= 1.14 or set ncore = 1.
 
 ```{r}
-pbmc3k.final <- irGSEA.score(object = pbmc3k.final, assay = "RNA", 
-                             slot = "data", seeds = 123, ncores = 1,
-                             min.cells = 3, min.feature = 0,
-                             custom = F, geneset = NULL, msigdb = T, 
-                             species = "Homo sapiens", category = "H",  
-                             subcategory = NULL, geneid = "symbol",
-                             method = c("AUCell", "UCell", "singscore", 
-                                        "ssgsea"),
-                             aucell.MaxRank = NULL, ucell.MaxRank = NULL, 
-                             kcdf = 'Gaussian')
+pbmc3k.final <- irGSEA.score(object         = pbmc3k.final, 
+                             assay          = "RNA", 
+                             slot           = "scale.data", 
+                             seeds          = 123,
+                             ncores         = 1,
+                             min.cells      = 3, 
+                             min.feature    = 0,
+                             custom         = F, 
+                             geneset        = NULL,
+                             msigdb         = T, 
+                             species        = "Homo sapiens", 
+                             category       = "H",  
+                             subcategory    = NULL, 
+                             geneid         = "symbol",
+                             method         = c("AUCell", "UCell", "singscore", "ssgsea","PCAscore"),
+                             aucell.MaxRank = NULL, 
+                             ucell.MaxRank  = NULL, 
+                             kcdf           = 'Gaussian')
 Seurat::Assays(pbmc3k.final)
 
 ```
@@ -127,11 +137,11 @@ common differential in all gene sets enrichment analysis methods. All
 results are saved in a list.
 
 ```{r}
-result.dge <- irGSEA.integrate(object = pbmc3k.final, 
+result.dge <- irGSEA.integrate(object   = pbmc3k.final, 
                                group.by = "seurat_annotations",
-                               metadata = NULL, col.name = NULL,
-                               method = c("AUCell","UCell","singscore",
-                                          "ssgsea"))
+                               metadata = NULL, 
+                               col.name = NULL,
+                               method   = c("AUCell","UCell","singscore", "ssgsea","PCAscore"))
 class(result.dge)
 ```
 
@@ -144,9 +154,9 @@ class(result.dge)
 Show co-upregulated or co-downregulated gene sets per cluster in RRA
 
 ```{r fig.height=7, fig.width=10}
-irGSEA.heatmap.plot <- irGSEA.heatmap(object = result.dge, 
-                                      method = "RRA",
-                                      top = 50, 
+irGSEA.heatmap.plot <- irGSEA.heatmap(object       = result.dge, 
+                                      method       = "RRA",
+                                      top          = 50, 
                                       show.geneset = NULL)
 irGSEA.heatmap.plot
 ```
@@ -161,7 +171,7 @@ please uninstall ggtree and run "remotes::install_github("YuLab-SMU/ggtree")".
 ```{r fig.height=8, fig.width=10}
 irGSEA.bubble.plot <- irGSEA.bubble(object = result.dge, 
                                     method = "RRA", 
-                                    top = 50)
+                                    top    = 50)
 irGSEA.bubble.plot
 ```
 
@@ -185,8 +195,7 @@ methods
 
 ```{r fig.height=10, fig.width=10}
 irGSEA.barplot.plot <- irGSEA.barplot(object = result.dge,
-                                      method = c("AUCell", "UCell", "singscore",
-                                                 "ssgsea"))
+                                      method = c("AUCell", "UCell", "singscore","ssgsea","PCAscore"))
 irGSEA.barplot.plot
 
 ```
@@ -207,6 +216,12 @@ scatterplot <- irGSEA.density.scatterplot(object = pbmc3k.final,
                              show.geneset = "HALLMARK-INFLAMMATORY-RESPONSE",
                              reduction = "umap")
 scatterplot
+
+scatterplot <- irGSEA.density.scatterplot(object = pbmc3k.final,
+                             method = "PCAscore",
+                             show.geneset = "HALLMARK-INFLAMMATORY-RESPONSE",
+                             reduction = "umap")
+scatterplot
 ```
 
 ### half vlnplot
@@ -214,11 +229,14 @@ scatterplot
 Show the expression and distribution of "HALLMARK-INFLAMMATORY-RESPONSE"
 in Ucell among clusters.
 
-```{r}
-halfvlnplot <- irGSEA.halfvlnplot(object = pbmc3k.final,
+```{r, fig.width= 12, fig.height=7}
+halfvlnplot1 <- irGSEA.halfvlnplot(object = pbmc3k.final,
                                   method = "UCell",
                                   show.geneset = "HALLMARK-INFLAMMATORY-RESPONSE")
-halfvlnplot
+halfvlnplot2 <- irGSEA.halfvlnplot(object = pbmc3k.final,
+                                  method = "PCAscore",
+                                  show.geneset = "HALLMARK-INFLAMMATORY-RESPONSE")
+halfvlnplot1+halfvlnplot2
 ```
 
 ### ridge plot
@@ -240,8 +258,22 @@ Show the expression and distribution of "HALLMARK-INFLAMMATORY-RESPONSE"
 in Ucell among clusters.
 
 ```{r}
-densityheatmap <- irGSEA.densityheatmap(object = pbmc3k.final,
+densityheatmap1 <- irGSEA.densityheatmap(object = pbmc3k.final,
                                         method = "UCell",
                                         show.geneset = "HALLMARK-INFLAMMATORY-RESPONSE")
-densityheatmap
+densityheatmap1
 ```
+
+
+```{r}
+densityheatmap2 <- irGSEA.densityheatmap(object = pbmc3k.final,
+                                        method = "PCAscore",
+                                        show.geneset = "HALLMARK-INFLAMMATORY-RESPONSE")
+densityheatmap2
+```
+
+
+```{r, fig.width=12, fig.height=8}
+densityheatmap1+densityheatmap2
+```
+

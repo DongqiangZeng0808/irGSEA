@@ -9,7 +9,7 @@ irGSEA.integrate(
   group.by = NULL,
   metadata = NULL,
   col.name = NULL,
-  method = c("AUCell", "UCell", "singscore", "ssgsea")
+  method = c("AUCell", "UCell", "singscore", "ssgsea", "PCAscore")
 )
 }
 \arguments{
